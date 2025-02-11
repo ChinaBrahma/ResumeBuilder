@@ -10,6 +10,8 @@ import {
   FAQ
 } from "../Components_Page";
 
+
+
 const LandingPage = () => {
   return (
     <>
