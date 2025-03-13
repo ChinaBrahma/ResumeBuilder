@@ -1,7 +1,9 @@
 import { create } from "zustand";
 import axios from "axios";
 import { persist } from "zustand/middleware";
-const proxy = "https://resume-builder-qvun.vercel.app"
+// const proxy = "https://resume-builder-qvun.vercel.app"
+const proxy = "https://legendary-palm-tree-vw6w5gvx4wv2w76w-5173.app.github.dev"
+
 
 const useAuthStore = create(
   persist((set) => ({
