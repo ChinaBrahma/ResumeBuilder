@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import axios from "axios";
 import { persist } from "zustand/middleware";
+const proxy = "https://resume-builder-qvun.vercel.app"
 
 const useAuthStore = create(
   persist((set) => ({
@@ -11,7 +12,7 @@ const useAuthStore = create(
     fetchUser: async () => {
       set({ loading: true }); // Start loading
       try {
-        const response = await axios.get("http://localhost:5000/api/auth/me", {
+        const response = await axios.get(proxy+"/api/auth/me", {
           withCredentials: true,
         });
         // Only update if user was previously null (prevents duplicate login toast)
@@ -29,7 +30,7 @@ const useAuthStore = create(
     signup: async (userData) => {
       try {
         const response = await axios.post(
-          "http://localhost:5000/api/auth/signup",
+          proxy+"/api/auth/signup",
           userData,
           { withCredentials: true }
         );
@@ -43,7 +44,7 @@ const useAuthStore = create(
     login: async (credentials) => {
       set({ loading: true }); // Start loading
       try {
-        await axios.post("http://localhost:5000/api/auth/login", credentials, {
+        await axios.post(proxy+"/api/auth/login", credentials, {
           withCredentials: true,
         });
         await useAuthStore.getState().fetchUser();
@@ -57,7 +58,7 @@ const useAuthStore = create(
     logout: async () => {
       try {
         await axios.post(
-          "http://localhost:5000/api/auth/logout",
+          proxy+"/api/auth/logout",
           {},
           { withCredentials: true }
         );
