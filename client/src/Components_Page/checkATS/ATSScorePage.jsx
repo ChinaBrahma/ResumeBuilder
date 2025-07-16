@@ -60,7 +60,8 @@ const ATSScorePage = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/upload/resume",
+        "https://resumebuilderserver.onrender.com/api/upload/resume",
+        // "http://localhost:5001/api/upload/resume",
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -89,7 +90,8 @@ const ATSScorePage = () => {
     { title: "Job Details", description: "Enter job role and description" },
     { title: "Review & Submit", description: "Review and submit for analysis" },
   ];
-  console.log("Results before rendering AtsResult:", results);
+  // console.log("Results before rendering AtsResult:", results);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 p-6 flex items-center justify-center">
       <div className="w-full max-w-2xl bg-gray-900 rounded-2xl shadow-xl border border-gray-800 overflow-hidden">
@@ -251,6 +253,7 @@ const ATSScorePage = () => {
       />
     </div>
   );
+
 };
 
 export default ATSScorePage;

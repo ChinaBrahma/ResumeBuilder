@@ -1,199 +1,221 @@
+/* ---------- controllers/saveResumeController.js ---------- */
 import Resume from "../models/resumeSchema.js";
-import puppeteer from "puppeteer";
 import mongoose from "mongoose";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import puppeteer from "puppeteer";
 
-// Create a new Resume (CREATE)
+
+/* ───────────────── CREATE ───────────────── */
 export const saveResumeController = async (req, res) => {
   try {
     const userId = req.user.id;
-    // console.log("userId in creating a resume", userId);
-    const { personalInfo, skills, experience, projects, education } = req.body;
+    const { personalInfo, skills, experience, projects, education, achievements, extracurricular } = req.body;
 
     const newResume = new Resume({
-      userId, // Links to the authenticated user
+      userId,
       personalInfo,
       skills,
       experience,
       projects,
       education,
+      achievements,
+      extracurricular,
     });
     await newResume.save();
-
-    res.status(201).json({ message: "Resume saved successfully!" });
+    res.status(201).json({
+      message: "Resume saved successfully!",
+      resumeId: newResume._id,
+      _id: newResume._id              // optional, for backward compatibility
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
-// Get the saved resume for the logged-in user (READ)
+
+/* ───────────────── READ (all) ───────────────── */
 export const getAllUserResumesController = async (req, res) => {
   try {
-    const userId = req.user.id;
-
-    // console.log("userId:", userId);
-
-    const resumes = await Resume.find({ userId });
-
+    const resumes = await Resume.find({ userId: req.user.id });
     if (!resumes) return res.status(404).json({ message: "Resume not found" });
-
     res.status(200).json({ resumes });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
+/* ───────────────── READ (single) ───────────────── */
 export const getSavedResumesController = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const resumeId = req.params.resumeId;
-
-    // console.log("userId:", userId);
-    // console.log("resumeId:", resumeId);
-
-    // Find the resume with both userId and _id
-    const resume = await Resume.findOne({ _id: resumeId, userId });
-
+    const resume = await Resume.findOne({ _id: req.params.resumeId, userId: req.user.id });
     if (!resume) return res.status(404).json({ message: "Resume not found" });
-
     res.status(200).json(resume);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// Update the saved resume (UPDATE)
+/* ───────────────── UPDATE ───────────────── */
 export const updateResumeController = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const resumeId = req.params.resumeId;
-    // console.log("Authenticated userId:", userId);
-    if (!mongoose.Types.ObjectId.isValid(resumeId)) {
-      console.log("Invalid resumeId:", resumeId);
+    const { resumeId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(resumeId))
       return res.status(400).json({ message: "Invalid resume ID" });
-    }
 
-    const { personalInfo, skills, experience, projects, education } = req.body;
-    // console.log("Parsed body:", { personalInfo, skills, experience, projects, education });
+    const { personalInfo, skills, experience, projects, education, achievements, extracurricular } = req.body;
 
-    // Clean subdocuments to avoid _id conflicts
-    const cleanExperience = experience.map(({ _id, ...rest }) => rest);
-    const cleanProjects = projects.map(({ _id, ...rest }) => rest);
-    const cleanEducation = education.map(({ _id, ...rest }) => rest);
-    // console.log("Cleaned data:", { personalInfo, skills, cleanExperience, cleanProjects, cleanEducation });
+    const clean = arr => (arr || []).map(({ _id, ...rest }) => rest);
 
     const resume = await Resume.findOneAndUpdate(
-      { _id: resumeId, userId },
+      { _id: resumeId, userId: req.user.id },
       {
         personalInfo,
         skills,
-        experience: cleanExperience,
-        projects: cleanProjects,
-        education: cleanEducation,
+        experience: clean(experience),
+        projects: clean(projects),
+        education: clean(education),
+        achievements,
+        extracurricular,
       },
       { new: true }
     );
-    // console.log("Updated resume:", resume);
 
-    if (!resume) {
-      console.log(
-        "Resume not found for resumeId:",
-        resumeId,
-        "and userId:",
-        userId
-      );
-      return res
-        .status(404)
-        .json({ message: "Resume not found or you don’t have access" });
-    }
-
+    if (!resume) return res.status(404).json({ message: "Resume not found or you don’t have access" });
     res.status(200).json({ message: "Resume updated successfully", resume });
   } catch (err) {
-    console.error("Update Resume Error:", err.stack || err);
     res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
+/* ───────────────── DELETE ───────────────── */
 export const deleteResumeController = async (req, res) => {
   try {
-    const userId = req.user.id; // get authemticated user id
-    const resumeId = req.params.resumeId;
-    // console.log("resume Id: ",resumeId)
-
-    if (!mongoose.Types.ObjectId.isValid(resumeId)) {
+    const { resumeId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(resumeId))
       return res.status(400).json({ message: "Invalid resume ID" });
-    }
 
-    const resume = await Resume.findOneAndDelete({ _id: resumeId });
-
-    if (!resume) {
-      return res
-        .status(404)
-        .json({ message: "Resume not found or you don’t have access" });
-    }
+    const resume = await Resume.findOneAndDelete({ _id: resumeId, userId: req.user.id });
+    if (!resume) return res.status(404).json({ message: "Resume not found or you don’t have access" });
 
     res.status(200).json({ message: "Resume deleted successfully" });
   } catch (err) {
-    console.error("Delete Resume Error:", err);
     res.status(500).json({ error: err.message || "Internal server error" });
   }
 };
 
-// Route: router.patch("/update/:resumeId", authenticateUser, updateResumeController);
-// Download Resume as PDF (DOWNLOAD)
+/* ───────────────── DOWNLOAD AS PDF ───────────────── */
 export const downloadResumeController = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const resumeId = req.params.resumeId;
-    // console.log("Authenticated userId:", userId);
-    // console.log("Resume ID to download:", resumeId);
-
-    const resume = await Resume.findOne({ _id: resumeId, userId });
+    const resume = await Resume.findOne({
+      _id: req.params.resumeId,
+      userId: req.user.id,
+    });
     if (!resume) return res.status(404).json({ message: "Resume not found" });
 
-    // console.log("Generating PDF for:", resume.personalInfo.name);
+    /* ---- launch Puppeteer ---- */
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
 
-    const browser = await puppeteer.launch({ headless: "new" });
+
     const page = await browser.newPage();
 
-    const htmlContent = `
-      <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          h2 { color: #333; }
-          p { margin: 5px 0; }
-        </style>
-      </head>
-      <body>
-        <h2>${resume.personalInfo?.name || "N/A"}</h2>
-        <p>Email: ${resume.personalInfo?.email || "N/A"}</p>
-        <p>Phone: ${resume.personalInfo?.phone || "N/A"}</p>
-        <h3>Skills</h3>
-        <p>${resume.skills?.join(", ") || "No skills listed"}</p>
-        <h3>Experience</h3>
-        ${resume.experience?.map((exp) => `<p><strong>${exp.company || "Unknown Company"}</strong></p>`).join("") || "<p>No experience listed</p>"}
-        <h3>Projects</h3>
-        ${resume.projects?.map((proj) => `
-          <p><strong>${proj?.title || "Untitled Project"}</strong></p>
-          <p>${proj?.description || "No description available"}</p>
-          ${proj?.link ? `<p><a href="${proj.link}" target="_blank">${proj.link}</a></p>` : ""}
-        `).join("") || "<p>No projects listed</p>"}
-        <h3>Education</h3>
-        ${resume.education?.map((edu) => `
-          <p><strong>${edu?.school || "Unknown School"}</strong> - ${edu?.degree || "Unknown Degree"} (${edu?.year || "N/A"})</p>
-        `).join("") || "<p>No education listed</p>"}
-      </body>
-      </html>
-    `;
+    /* ---- load template ---- */
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const templatePath = path.join(
+      __dirname,
+      "../templates/resume-template.html"
+    );
+    let htmlContent = fs.readFileSync(templatePath, "utf-8");
 
-    await page.setContent(htmlContent);
-    const pdfBuffer = await page.pdf({ format: "A4" });
-    // console.log("PDF Buffer length:", pdfBuffer.length);
+    /* ---------- helpers ---------- */
+    const spanTags = (arr) =>
+      (arr || [])
+        .map((s) => `<span class="skill">${s}</span>`)
+        .join("");
+
+    const bulletList = (arr) =>
+      (arr || []).map((i) => `<li>${i}</li>`).join("");
+
+    const blockList = (arr, fn) => (arr || []).map(fn).join("");
+
+    /* ---------- dynamic blocks ---------- */
+    const educationHTML = blockList(resume.education, (edu) => `
+      <div class="item">
+        <h3 class="bold">${edu.school || ""}</h3>
+        <p class="sub">${edu.degree || ""} • ${edu.year || ""}</p>
+      </div>`);
+
+    const experienceHTML = blockList(resume.experience, (exp) => `
+      <div class="item">
+        <h3 class="bold">${exp.title || ""} @ ${exp.company || ""}</h3>
+        <p class="sub">${exp.startDate || ""} – ${exp.endDate || "Present"}</p>
+        <ul>${bulletList(exp.description ? [exp.description] : [])}</ul>
+      </div>`);
+
+    const projectsHTML = blockList(resume.projects, (proj) => `
+      <div class="item">
+        <h3 class="bold">${proj.title || ""}</h3>
+        <p class="sub">${proj.description || ""}</p>
+        ${proj.link
+        ? `<a href="${proj.link}" target="_blank">${proj.link}</a>`
+        : ""
+      }
+      </div>`);
+
+    /* ---------- section wrappers ---------- */
+    const section = (title, inner) =>
+      inner.trim()
+        ? `<div class="section"><h2>${title}</h2>${inner}</div>`
+        : "";
+
+    /* ---------- assembled sections ---------- */
+    const educationSection = section("Education", educationHTML);
+    const skillsSection = section("Skills", spanTags(resume.skills));
+    const experienceSection = section("Experience", experienceHTML);
+    const projectsSection = section("Projects", projectsHTML);
+    const achievementsSection = section(
+      "Achievements",
+      `<ul>${bulletList(resume.achievements)}</ul>`
+    );
+    const extracurricularSection = section(
+      "Extra-Curricular Activities",
+      `<ul>${bulletList(resume.extracurricular)}</ul>`
+    );
+
+    /* ---------- placeholder injection ---------- */
+    htmlContent = htmlContent
+      .replace(/{{\s*name\s*}}/g, resume.personalInfo?.name || "N/A")
+      .replace(/{{\s*email\s*}}/g, resume.personalInfo?.email || "")
+      .replace(/{{\s*phone\s*}}/g, resume.personalInfo?.phone || "")
+      .replace(/{{\s*github\s*}}/g, resume.personalInfo?.github || "")
+      .replace(/{{\s*linkedin\s*}}/g, resume.personalInfo?.linkedin || "")
+      // whole-section placeholders
+      .replace("{{educationSection}}", educationSection)
+      .replace("{{skillsSection}}", skillsSection)
+      .replace("{{experienceSection}}", experienceSection)
+      .replace("{{projectsSection}}", projectsSection)
+      .replace("{{achievementsSection}}", achievementsSection)
+      .replace("{{extracurricularSection}}", extracurricularSection);
+
+    /* ---- generate PDF ---- */
+    await page.setContent(htmlContent, { waitUntil: "load" });
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: 0, right: 0, bottom: 0, left: 0 },
+    });
 
     await browser.close();
 
     res.set({
       "Content-Type": "application/pdf",
       "Content-Length": pdfBuffer.length,
-      "Content-Disposition": `attachment; filename="${resume.personalInfo?.name.replace(/\s+/g, "_") || "Resume"}.pdf"`,
+      "Content-Disposition": `attachment; filename="${(resume.personalInfo?.name || "Resume").replace(/\s+/g, "_")
+        }.pdf"`,
     });
     res.end(pdfBuffer, "binary");
   } catch (err) {
@@ -201,3 +223,4 @@ export const downloadResumeController = async (req, res) => {
     res.status(500).json({ error: "Failed to generate resume PDF" });
   }
 };
+

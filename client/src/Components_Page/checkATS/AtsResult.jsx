@@ -69,7 +69,7 @@ const AtsResult = ({ data }) => {
       {/* Optional Feedback */}
       {data.score < 80 && (
         <p className="mt-4 text-gray-400 text-sm italic">
-          Boost your score by addressing the suggestions below!
+          Boost your score by addressing the issues in your resume!
         </p>
       )}
     </motion.div>

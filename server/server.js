@@ -12,21 +12,26 @@ app.use(express.json());
 app.use(cookieParser()); // Required for handling cookies
 app.use(
   cors({
-    origin: "http://localhost:5173", // ✅ Allow frontend origin
+    origin: process.env.FRONTEND_URL_PRODUCTION, // frontend origin for dev
+    // origin: process.env.FRONTEND_URL_PRODUCTION, // frontend origin for production
     credentials: true, // ✅ Allow cookies to be sent
   })
 );
-
-
 
 // Routes
 import authRoutes from './routes/authRoutes.js'
 import uploadRoutes from './routes/uploadRoutes.js'
 import saveResumeRoutes from './routes/saveResumeRoutes.js'
 
-app.use('/api/auth', authRoutes); // authentication
+app.use('/api/', authRoutes); // authentication
 app.use('/api/upload', uploadRoutes); // upload resume to check ats score
 app.use('/api/resume', saveResumeRoutes); // CRUD Resume to db
+
+
+// app.get("/", (req, res) => {
+//   res.send("Server is running ✅");
+// });
+
 
 
 const PORT = process.env.PORT || 5001

@@ -12,7 +12,6 @@ export const handleResume = async (req, res) => {
       .status(400)
       .json({ error: "Job role and description are required" });
   }
-
   let resumeText = "";
   try {
     const pdfData = await PdfParse(fs.readFileSync(req.file.path));
@@ -23,13 +22,12 @@ export const handleResume = async (req, res) => {
   }
 
   try {
-    const response = await axios.post("http://127.0.0.1:5002/predict", {
+    const response = await axios.post(process.env.PYTHON_URL_PRODUCTION, {
       resume_text: resumeText,
       job_desc,
       role,
     });
-    // console.log(response.data); // WORKING Fine
-
+    console.log(response.data); // WORKING Fine
     // Normalize the response
     const normalizedResponse = {
       score: response.data.score,

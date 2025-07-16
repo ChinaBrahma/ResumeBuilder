@@ -6,7 +6,7 @@ export default function Skills() {
   const { skills, setSkills, fetchResume, updateResume, currentResumeId } = useResumeStore();
   const [skill, setSkill] = useState("");
 
-  console.log("current resume id in skills", currentResumeId);
+  // console.log("current resume id in skills", currentResumeId);
   useEffect(() => {
     fetchResume(currentResumeId); // Fetch resume data on mount
   }, []);

@@ -1,19 +1,19 @@
-# Use official Node.js runtime as parent image
-FROM node:22-alpine
+# Use Puppeteer base image with Chromium
+FROM ghcr.io/puppeteer/puppeteer:latest
 
 # Set working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json
-COPY package.json package-lock.json ./
+# Set correct ownership during copy
+COPY --chown=pptruser:pptruser package.json package-lock.json ./
 
-# Install dependencies
-RUN npm i
+# Install dependencies as pptruser (already default in this image)
+RUN npm install
 
-# Copy the rest of the application
-COPY . .
+# Copy all source files with correct ownership
+COPY --chown=pptruser:pptruser . .
 
-# Expose the correct port
+# Expose your backend port
 EXPOSE 5000
 
 # Start the server

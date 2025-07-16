@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import useResumeStore from "../../../store/resumeStore";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 // eslint-disable-next-line react/prop-types
 export default function ChoiceScreen({ onChoice }) {
@@ -19,25 +21,27 @@ export default function ChoiceScreen({ onChoice }) {
     if (window.confirm("Are you sure you want to delete this resume? This action cannot be undone.")) {
       try {
         await deleteResume(resumeId);
-        alert("Resume deleted successfully!");
+        toast.success("Resume deleted successfully!")
+        // alert("Resume deleted successfully!");
       // eslint-disable-next-line no-unused-vars
       } catch (error) {
-        alert("Error deleting resume. Please try again.");
+        toast.error("Error deleting resume. Please try again.")
+        // alert("Error deleting resume. Please try again.");
       }
     }
   };
 
-  useEffect(() => {
-    fetchALLResume()
-        .then(() => console.log("Resumes fetched successfully:", resumes))
-        .catch((error) => console.error("Fetch resumes failed:", error));
-    // Fetch resumes only if not already loaded and not currently loading
-    // if (resumes.length === 0 && !loading) {
-    //   fetchALLResume()
-    //     .then(() => console.log("Resumes fetched successfully:", resumes))
-    //     .catch((error) => console.error("Fetch resumes failed:", error));
-    // }
-  }, []); // Dependencies ensure controlled fetching
+  // useEffect(() => {
+  //   fetchALLResume()
+  //       .then(() => console.log("Resumes fetched successfully:", resumes))
+  //       .catch((error) => console.error("Fetch resumes failed:", error));
+  //   // Fetch resumes only if not already loaded and not currently loading
+  //   // if (resumes.length === 0 && !loading) {
+  //   //   fetchALLResume()
+  //   //     .then(() => console.log("Resumes fetched successfully:", resumes))
+  //   //     .catch((error) => console.error("Fetch resumes failed:", error));
+  //   // }
+  // }, []); // Dependencies ensure controlled fetching
 
   return (
     <div className="flex flex-col items-center gap-6">
@@ -62,7 +66,7 @@ export default function ChoiceScreen({ onChoice }) {
                   onClick={() => handleEditResume(resume)}
                   className="flex-1 py-2 px-4 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors duration-300 text-left truncate"
                 >
-                  {resume.title || `Resume ${resume._id}`}
+                  {resume.title || `Resume - ${resume.personalInfo.name}`}
                 </button>
                 <button
                   onClick={() => handleDeleteResume(resume._id)}

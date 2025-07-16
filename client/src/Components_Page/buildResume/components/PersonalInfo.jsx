@@ -1,27 +1,36 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import useResumeStore from "../../../store/resumeStore";
 
 export default function PersonalInfo() {
   const { personalInfo, setPersonalInfo, fetchResume, updateResume, currentResumeId } = useResumeStore();
+  const debounceTimer = useRef(null); // Ref to store timer ID
 
-  console.log("current resume id in personal info", currentResumeId);
+
   useEffect(() => {
     if (currentResumeId) {
-      fetchResume(currentResumeId); // Only fetch if currentResumeId is set
+      fetchResume(currentResumeId); // Fetch only if ID exists
     }
-  }, [currentResumeId]); // Depend on currentResumeId, not an empty array
+  }, [currentResumeId]);
 
-  const handleChange = async (e) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
+
+    // Update the local state
     setPersonalInfo({ ...personalInfo, [name]: value });
 
-    if (currentResumeId) { // Only update if editing an existing resume
-      try {
-        await updateResume(currentResumeId);
-      } catch (error) {
-        console.error("Error updating resume:", error);
-      }
+    // Clear previous timer
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
     }
+
+    // Set a new timer
+    debounceTimer.current = setTimeout(() => {
+      if (currentResumeId) {
+        updateResume(currentResumeId).catch((err) => {
+          console.error("Error updating resume:", err);
+        });
+      }
+    }, 700); //  600ms is good for forms
   };
 
   return (
