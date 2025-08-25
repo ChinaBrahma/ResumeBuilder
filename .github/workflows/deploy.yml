@@ -5,7 +5,7 @@ env:
 
 on:
   schedule:
-    - cron: '0 * * * *' # Schedule the job to run every 24 hours at midnight UTC
+    - cron: '* * * * *' # Schedule the job to run every 24 hours at midnight UTC
 
 jobs:
   Deploy-Preview:
